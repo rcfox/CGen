@@ -10,8 +10,8 @@ with src.function('main', 'int', [('int', 'argc'), ('char**', 'argv')]) as main:
         f1.variable('foo', 'double')
         f1.set('bar', 5)
         f1.call('printf',[r'"Foo: %d\n"', 'bar'], return_dest='foo')
-        f1('return 0')
+        f1.append('return 0')
     main.set('bar',3)
-    main('return bar')
+    main.append('return bar')
 
 print src

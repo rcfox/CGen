@@ -27,7 +27,7 @@ class CodeBlock(object):
         self.code.append('%s}' % indent)
         self.owner.code.append(str(self))
 
-    def __call__(self, statement):
+    def append(self, statement):
         indent = self.indent_string * (self.indent + 1)
         self.code.append('%s%s;' % (indent, statement))
 
@@ -47,7 +47,7 @@ class CodeBlock(object):
         if value is not None:
             statement = '%s = %s' % (statement, value)
         self.variables[name] = Variable(name, type, value)
-        self(statement)
+        self.append(statement)
 
     def set(self, name, value):
         statement = '%s = %s' % (name, value)
@@ -55,13 +55,13 @@ class CodeBlock(object):
             self.variables[name] = value
         else:
             raise KeyError(name, 'variable not defined')
-        self(statement)
+        self.append(statement)
 
     def call(self, function_name, arguments, return_dest=None):
         statement = '%s(%s)' % (function_name, ', '.join(arguments))
         if return_dest is not None:
             statement = '%s = %s' % (return_dest, statement)
-        self(statement)
+        self.append(statement)
 
 
 class Function(CodeBlock):
