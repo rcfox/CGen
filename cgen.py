@@ -1,9 +1,16 @@
+class Variable(object):
+    def __init__(self, name, type, value=None):
+        self.name = name
+        self.type = type
+        self.value = value
+
 class CodeBlock(object):
     def __init__(self, owner, text=None):
         self.owner = owner
         self.indent = 0
         self.indent_string = '    '
         self.code = []
+        self.variables = {}
         if text is not None:
             self.code.append(text)
 
@@ -32,11 +39,20 @@ class CodeBlock(object):
             include_chars = ('"', '"')
         self.code.append('#include %s%s%s' % (include_chars[0], filename, include_chars[1]))
 
-    def function(self, name, return_type, arguments):
-        return Function(self, name, return_type, arguments)
+    def variable(self, name, type, value=None):
+        statement = '%s %s' % (type, name)
+        if value is not None:
+            statement = '%s = %s' % (statement, value)
+        self.variables[name] = Variable(name, type, value)
+        self(statement)
 
-    def if_statement(self, condition):
-        return IfStatement(self, condition)
+    def set(self, name, value):
+        statement = '%s = %s' % (name, value)
+        if name in self.variables:
+            self.variables[name] = value
+        else:
+            raise KeyError(name, 'variable not defined')
+        self(statement)
 
 class Function(CodeBlock):
     def __init__(self, owner, name, return_type, arguments):
@@ -51,6 +67,15 @@ class Function(CodeBlock):
         self.code.append('%s {' % self.prototype)
         return CodeBlock.__enter__(self)
 
+    def if_statement(self, condition):
+        return IfStatement(self, condition)
+
+    def while_statement(self, condition):
+        return WhileStatement(self, condition)
+
+    def for_statement(self, initial, condition, update):
+        return ForStatement(self, initial, condition, update)
+
 class IfStatement(CodeBlock):
     def __init__(self, owner, condition):
         CodeBlock.__init__(self, owner)
@@ -60,7 +85,30 @@ class IfStatement(CodeBlock):
         self.code.append('if (%s) {' % self.condition)
         return CodeBlock.__enter__(self)
 
+class WhileStatement(CodeBlock):
+    def __init__(self, owner, condition):
+        CodeBlock.__init__(self, owner)
+        self.condition = condition
+
+    def __enter__(self):
+        self.code.append('while (%s) {' % self.condition)
+        return CodeBlock.__enter__(self)
+
+class ForStatement(CodeBlock):
+    def __init__(self, owner, initial, condition, update):
+        CodeBlock.__init__(self, owner)
+        self.initial = initial
+        self.condition = condition
+        self.update = update
+
+    def __enter__(self):
+        self.code.append('for (%s; %s; %s) {' % (self.initial, self.condition, self.update))
+        return CodeBlock.__enter__(self)
+
 class SourceFile(CodeBlock):
     def __init__(self):
         CodeBlock.__init__(self, None)
         self.indent = -1
+
+    def function(self, name, return_type, arguments):
+        return Function(self, name, return_type, arguments)
