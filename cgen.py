@@ -5,8 +5,8 @@ class Variable(object):
         self.value = value
 
 class CodeBlock(object):
-    def __init__(self, owner, text=None, variables=None):
-        self.owner = owner
+    def __init__(self, parent, text=None, variables=None):
+        self.parent = parent
         self.indent = 0
         self.indent_string = '    '
         self.code = []
@@ -18,14 +18,14 @@ class CodeBlock(object):
             self.code.append(text)
 
     def __enter__(self):
-        if self.owner is not None:
-            self.indent = self.owner.indent + 1
+        if self.parent is not None:
+            self.indent = self.parent.indent + 1
         return self
 
     def __exit__(self, type, value, traceback):
         indent = self.indent_string * self.indent
         self.code.append('%s}' % indent)
-        self.owner.code.append(str(self))
+        self.parent.code.append(str(self))
 
     def append(self, statement):
         indent = self.indent_string * (self.indent + 1)
@@ -65,8 +65,8 @@ class CodeBlock(object):
 
 
 class Function(CodeBlock):
-    def __init__(self, owner, name, return_type, arguments, variables=None):
-        CodeBlock.__init__(self, owner, variables=variables)
+    def __init__(self, parent, name, return_type, arguments, variables=None):
+        CodeBlock.__init__(self, parent, variables=variables)
         self.name = name
         self.return_type = return_type
         self.arguments = arguments
@@ -87,8 +87,8 @@ class Function(CodeBlock):
         return ForStatement(self, initial, condition, update, variables=self.variables)
 
 class IfStatement(CodeBlock):
-    def __init__(self, owner, condition, variables=None):
-        CodeBlock.__init__(self, owner, variables=variables)
+    def __init__(self, parent, condition, variables=None):
+        CodeBlock.__init__(self, parent, variables=variables)
         self.condition = condition
 
     def __enter__(self):
@@ -96,8 +96,8 @@ class IfStatement(CodeBlock):
         return CodeBlock.__enter__(self)
 
 class WhileStatement(CodeBlock):
-    def __init__(self, owner, condition, variables=None):
-        CodeBlock.__init__(self, owner, variables=variables)
+    def __init__(self, parent, condition, variables=None):
+        CodeBlock.__init__(self, parent, variables=variables)
         self.condition = condition
 
     def __enter__(self):
@@ -105,8 +105,8 @@ class WhileStatement(CodeBlock):
         return CodeBlock.__enter__(self)
 
 class ForStatement(CodeBlock):
-    def __init__(self, owner, initial, condition, update, variables=None):
-        CodeBlock.__init__(self, owner, variables=variables)
+    def __init__(self, parent, initial, condition, update, variables=None):
+        CodeBlock.__init__(self, parent, variables=variables)
         self.initial = initial
         self.condition = condition
         self.update = update
