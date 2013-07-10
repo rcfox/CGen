@@ -57,6 +57,13 @@ class CodeBlock(object):
             raise KeyError(name, 'variable not defined')
         self(statement)
 
+    def call(self, function_name, arguments, return_dest=None):
+        statement = '%s(%s)' % (function_name, ', '.join(arguments))
+        if return_dest is not None:
+            statement = '%s = %s' % (return_dest, statement)
+        self(statement)
+
+
 class Function(CodeBlock):
     def __init__(self, owner, name, return_type, arguments, variables=None):
         CodeBlock.__init__(self, owner, variables=variables)
