@@ -74,7 +74,10 @@ class CodeBlock(object):
             code_strings = ['']
             for c in self.code:
                 if not isinstance(c, CodeBlock):
-                    code_strings.append('%s;' % str(c))
+                    if type(c) == str and c.lstrip().startswith('#'):
+                        code_strings.append(c)
+                    else:
+                        code_strings.append('%s;' % str(c))
                 else:
                     code_strings.append(str(c))
             string = sep.join(code_strings)
