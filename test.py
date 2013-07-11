@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 from cgen import *
+from math import pi
 
 src = SourceFile()
 src.include('stdio.h', True)
 
-with src.function('main', 'int', [('int', 'argc'), ('char**', 'argv')]) as main:
-    main.variable('bar', 'int', 3)
-    with main.for_statement('a','b','c') as f1:
-        f1.variable('foo', 'double')
-        f1.set('bar', 5)
-        f1.call('printf',[r'"Foo: %d\n"', 'bar'], return_dest='foo')
-        f1.append('return 0')
-    main.set('bar',3)
-    main.append('return bar')
+src.variable('foo', 'int', value=6, const=True)
 
-print src
+with src.function('main', 'int', [Variable('argc', 'int'), Variable('argv', 'char**')]) as main:
+    main.variable('bar', 'int', 3, register=True)
+    main.variable('asdf', main.type(), value='&main')
+    with main.if_statement('bar == 3') as f1:
+        with f1.for_statement(Variable('i', 'size_t', value=0), 'i < 10', 'i++') as f2:
+            f2.variable('foo', 'double', pi)
+            f2.set('argc', f1.call('printf',[r'"Foo: %d %g\n"', 'bar', 'foo'], use_return=True))
+    main.set('bar',8)
+    main.return_statement('bar')

@@ -1,8 +1,43 @@
 class Variable(object):
-    def __init__(self, name, type, value=None):
+    def __init__(self, name, type, value=None, const=False, static=False, volatile=False, restrict=False, register=False, extern=False):
         self.name = name
-        self.type = type
+        self._type = type
         self.value = value
+        self.const = const
+        self.static = static
+        self.volatile = volatile
+        self.restrict = restrict
+        self.register = register
+
+    def type(self):
+        d = self._type
+        if self.const:
+            d = '%s %s' % ('const', d)
+        if self.volatile:
+            d = '%s %s' % ('volatile', d)
+        if self.restrict:
+            d = '%s %s' % ('restrict', d)
+        if self.static:
+            d = '%s %s' % ('static', d)
+        if self.register:
+            d = '%s %s' % ('register', d)
+        return d
+
+    def definition(self):
+        if '(*)' in self.type():
+            d = self.type().replace('(*)', '(*%s)' % self.name, 1)
+        else:
+            d = '%s %s' % (self.type(), self.name)
+        return d
+
+    def __str__(self):
+        statement = self.definition()
+        if self.value is not None:
+            statement = '%s = %s' % (statement, self.value)
+        return statement
+
+    def __repr__(self):
+        return '<Variable: %s = %s>' % (self.name, self.value)
 
 class CodeBlock(object):
     def __init__(self, parent, text=None, variables=None):
@@ -23,17 +58,19 @@ class CodeBlock(object):
         return self
 
     def __exit__(self, type, value, traceback):
-        indent = self.indent_string * self.indent
-        self.code.append('%s}' % indent)
-        self.parent.code.append(str(self))
+        self.parent.code.append(self)
 
     def append(self, statement):
-        indent = self.indent_string * (self.indent + 1)
-        self.code.append('%s%s;' % (indent, statement))
+        self.code.append(statement)
 
     def __str__(self):
         indent = self.indent_string * self.indent
-        return '%s%s' % (indent, '\n'.join(self.code))
+        sep = '\n' + indent
+        string = sep.join(map(str, self.code))
+        if self.indent > 0:
+            indent_close = self.indent_string * (self.indent-1)
+            string += '\n%s}' % indent_close
+        return string
 
     def include(self, filename, system_header=False):
         if system_header:
@@ -42,41 +79,13 @@ class CodeBlock(object):
             include_chars = ('"', '"')
         self.code.append('#include %s%s%s' % (include_chars[0], filename, include_chars[1]))
 
-    def variable(self, name, type, value=None):
-        statement = '%s %s' % (type, name)
-        if value is not None:
-            statement = '%s = %s' % (statement, value)
-        self.variables[name] = Variable(name, type, value)
-        self.append(statement)
+    def variable(self, name, type, value=None, const=False, static=False, volatile=False, restrict=False, register=False):
+        var = Variable(name, type, value, const=const, static=static, volatile=volatile, restrict=restrict, register=register)
+        self.variables[name] = var
+        self.append(var)
+        return var
 
-    def set(self, name, value):
-        statement = '%s = %s' % (name, value)
-        if name in self.variables:
-            self.variables[name] = value
-        else:
-            raise KeyError(name, 'variable not defined')
-        self.append(statement)
-
-    def call(self, function_name, arguments, return_dest=None):
-        statement = '%s(%s)' % (function_name, ', '.join(arguments))
-        if return_dest is not None:
-            statement = '%s = %s' % (return_dest, statement)
-        self.append(statement)
-
-
-class Function(CodeBlock):
-    def __init__(self, parent, name, return_type, arguments, variables=None):
-        CodeBlock.__init__(self, parent, variables=variables)
-        self.name = name
-        self.return_type = return_type
-        self.arguments = arguments
-        args = ', '.join(['%s %s' % a for a in arguments])
-        self.prototype = '%s %s(%s)' % (return_type, name, args)
-
-    def __enter__(self):
-        self.code.append('%s {' % self.prototype)
-        return CodeBlock.__enter__(self)
-
+class FunctionContextCodeBlock(CodeBlock):
     def if_statement(self, condition):
         return IfStatement(self, condition, variables=self.variables)
 
@@ -84,27 +93,79 @@ class Function(CodeBlock):
         return WhileStatement(self, condition, variables=self.variables)
 
     def for_statement(self, initial, condition, update):
-        return ForStatement(self, initial, condition, update, variables=self.variables)
+        variables = self.variables
+        if type(initial) == Variable:
+            if initial.value is None:
+                raise ValueError('%s: must initialize variable in for loop' % initial.name)
+            variables[initial.name] = initial
+        return ForStatement(self, initial, condition, update, variables=variables)
 
-class IfStatement(CodeBlock):
+    def set(self, name, value, override_check=False):
+        statement = '%s = %s' % (name, value)
+        if name in self.variables or override_check:
+            self.variables[name] = value
+        else:
+            raise KeyError(name, 'variable not defined')
+        self.append(statement)
+
+    def call(self, function_name, arguments, use_return=False):
+        statement = '%s(%s)' % (function_name, ', '.join(arguments))
+        if not use_return:
+            self.append(statement)
+        else:
+            return statement
+
+    def return_statement(self, value=None):
+        if value is None:
+            self.append('return')
+        else:
+            self.append('return %s' % str(value))
+
+class Function(FunctionContextCodeBlock):
+    def __init__(self, parent, name, return_type, arguments, variables=None):
+        CodeBlock.__init__(self, parent, variables=variables)
+        self.name = name
+        self.return_type = return_type
+        self.arguments = arguments
+        for a in arguments:
+            self.variables[a.name] = a
+
+    def prototype(self, arg_names=True):
+        if arg_names:
+            args = ', '.join([str(arg) for arg in self.arguments])
+        else:
+            args = ', '.join([arg.type for arg in self.arguments])
+        return '%s %s(%s)' % (self.return_type, self.name, args)
+
+    def type(self):
+        return '%s (*)(%s)' % (self.return_type, ', '.join([arg.type() for arg in self.arguments]))
+
+    def __enter__(self):
+        CodeBlock.__enter__(self)
+        self.code.append('%s {' % self.prototype())
+        return self
+
+class IfStatement(FunctionContextCodeBlock):
     def __init__(self, parent, condition, variables=None):
         CodeBlock.__init__(self, parent, variables=variables)
         self.condition = condition
 
     def __enter__(self):
+        CodeBlock.__enter__(self)
         self.code.append('if (%s) {' % self.condition)
-        return CodeBlock.__enter__(self)
+        return self
 
-class WhileStatement(CodeBlock):
+class WhileStatement(FunctionContextCodeBlock):
     def __init__(self, parent, condition, variables=None):
         CodeBlock.__init__(self, parent, variables=variables)
         self.condition = condition
 
     def __enter__(self):
+        CodeBlock.__enter__(self)
         self.code.append('while (%s) {' % self.condition)
-        return CodeBlock.__enter__(self)
+        return self
 
-class ForStatement(CodeBlock):
+class ForStatement(FunctionContextCodeBlock):
     def __init__(self, parent, initial, condition, update, variables=None):
         CodeBlock.__init__(self, parent, variables=variables)
         self.initial = initial
@@ -112,13 +173,22 @@ class ForStatement(CodeBlock):
         self.update = update
 
     def __enter__(self):
+        CodeBlock.__enter__(self)
         self.code.append('for (%s; %s; %s) {' % (self.initial, self.condition, self.update))
-        return CodeBlock.__enter__(self)
+        return self
 
 class SourceFile(CodeBlock):
     def __init__(self):
         CodeBlock.__init__(self, None)
-        self.indent = -1
+        self.functions = {}
 
     def function(self, name, return_type, arguments):
-        return Function(self, name, return_type, arguments, variables=self.variables)
+        func = Function(self, name, return_type, arguments, variables=self.variables)
+        if name not in self.functions:
+            self.functions[name] = func
+            return func
+        else:
+            raise KeyError(name, 'function already exists')
+
+    def variable(self, name, type, value=None, const=False, static=True, volatile=False, restrict=False, register=False):
+        return CodeBlock.variable(self, name, type, const=const, value=value, static=static, volatile=volatile, restrict=restrict, register=register)        
