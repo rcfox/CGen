@@ -103,7 +103,7 @@ class FunctionContextCodeBlock(CodeBlock):
     def set(self, name, value, override_check=False):
         statement = '%s = %s' % (name, value)
         if name in self.variables or override_check:
-            self.variables[name] = value
+            self.variables[name].value = value
         else:
             raise KeyError(name, 'variable not defined')
         self.append(statement)
