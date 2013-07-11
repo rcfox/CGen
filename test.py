@@ -5,6 +5,10 @@ from math import pi
 src = SourceFile()
 src.include('stdio.h', True)
 
+with src.struct('foo', 'bar') as struct:
+    struct.variable('baz', 'int')
+    struct.variable('qux', 'char*', const=True)
+
 src.variable('foo', 'int', value=6, const=True)
 
 with src.function('main', 'int', [Variable('argc', 'int'), Variable('argv', 'char**')]) as main:
@@ -16,3 +20,5 @@ with src.function('main', 'int', [Variable('argc', 'int'), Variable('argv', 'cha
             f2.set('argc', f1.call('printf',[r'"Foo: %d %g\n"', 'bar', 'foo'], use_return=True))
     main.set('bar',8)
     main.return_statement('bar')
+
+print src

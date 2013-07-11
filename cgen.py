@@ -42,7 +42,10 @@ class Variable(object):
 class CodeBlock(object):
     def __init__(self, parent, text=None, variables=None):
         self.parent = parent
-        self.indent = 0
+        if parent is None:
+            self.indent = 0
+        else:
+            self.indent = self.parent.indent + 1
         self.indent_string = '    '
         self.code = []
         if variables is None:
@@ -53,8 +56,6 @@ class CodeBlock(object):
             self.code.append(text)
 
     def __enter__(self):
-        if self.parent is not None:
-            self.indent = self.parent.indent + 1
         return self
 
     def __exit__(self, type, value, traceback):
@@ -66,7 +67,15 @@ class CodeBlock(object):
     def __str__(self):
         indent = self.indent_string * self.indent
         sep = '\n' + indent
-        string = '\n' + indent + sep.join(map(str, self.code))
+        string = ''
+        if len(self.code) > 0:
+            code_strings = ['']
+            for c in self.code:
+                if not isinstance(c, CodeBlock):
+                    code_strings.append('%s;' % str(c))
+                else:
+                    code_strings.append(str(c))
+            string = sep.join(code_strings)
         if self.indent > 0:
             indent_close = self.indent_string * (self.indent-1)
             string += '\n%s}' % indent_close
@@ -84,6 +93,12 @@ class CodeBlock(object):
         self.variables[name] = var
         self.append(var)
         return var
+
+    def struct(self, name, typedef=None):
+        return StructUnion(self, name, typedef, which='struct')
+
+    def union(self, name, typedef=None):
+        return StructUnion(self, name, typedef, which='union')
 
 class FunctionContextCodeBlock(CodeBlock):
     def if_statement(self, condition):
@@ -121,6 +136,23 @@ class FunctionContextCodeBlock(CodeBlock):
         else:
             self.append('return %s' % str(value))
 
+class StructUnion(CodeBlock):
+    def __init__(self, parent, name, typedef=None, which='struct'):
+        CodeBlock.__init__(self, parent)
+        self.name = name
+        self.typedef = typedef
+        self.which = which
+
+    def __str__(self):
+        if self.typedef is None:
+            string = '%s %s {' % (self.which, self.name)
+        else:
+            string = 'typedef %s %s {' % (self.which, self.name)
+        string += CodeBlock.__str__(self)
+        if self.typedef is not None:
+            string += ' %s;' % self.typedef
+        return string
+
 class Function(FunctionContextCodeBlock):
     def __init__(self, parent, name, return_type, arguments, variables=None):
         CodeBlock.__init__(self, parent, variables=variables)
@@ -132,7 +164,7 @@ class Function(FunctionContextCodeBlock):
 
     def prototype(self, arg_names=True):
         if arg_names:
-            args = ', '.join([str(arg) for arg in self.arguments])
+            args = ', '.join([arg.definition() for arg in self.arguments])
         else:
             args = ', '.join([arg.type for arg in self.arguments])
         return '%s %s(%s)' % (self.return_type, self.name, args)
@@ -191,4 +223,4 @@ class SourceFile(CodeBlock):
             raise KeyError(name, 'function already exists')
 
     def variable(self, name, type, value=None, const=False, static=True, volatile=False, restrict=False, register=False):
-        return CodeBlock.variable(self, name, type, const=const, value=value, static=static, volatile=volatile, restrict=restrict, register=register)        
+        return CodeBlock.variable(self, name, type, const=const, value=value, static=static, volatile=volatile, restrict=restrict, register=register)
