@@ -66,7 +66,7 @@ class CodeBlock(object):
     def __str__(self):
         indent = self.indent_string * self.indent
         sep = '\n' + indent
-        string = sep.join(map(str, self.code))
+        string = '\n' + indent + sep.join(map(str, self.code))
         if self.indent > 0:
             indent_close = self.indent_string * (self.indent-1)
             string += '\n%s}' % indent_close
@@ -140,30 +140,30 @@ class Function(FunctionContextCodeBlock):
     def type(self):
         return '%s (*)(%s)' % (self.return_type, ', '.join([arg.type() for arg in self.arguments]))
 
-    def __enter__(self):
-        CodeBlock.__enter__(self)
-        self.code.append('%s {' % self.prototype())
-        return self
+    def __str__(self):
+        string = '%s {' % self.prototype()
+        string += CodeBlock.__str__(self)
+        return string
 
 class IfStatement(FunctionContextCodeBlock):
     def __init__(self, parent, condition, variables=None):
         CodeBlock.__init__(self, parent, variables=variables)
         self.condition = condition
 
-    def __enter__(self):
-        CodeBlock.__enter__(self)
-        self.code.append('if (%s) {' % self.condition)
-        return self
+    def __str__(self):
+        string = 'if (%s) {' % self.condition
+        string += CodeBlock.__str__(self)
+        return string
 
 class WhileStatement(FunctionContextCodeBlock):
     def __init__(self, parent, condition, variables=None):
         CodeBlock.__init__(self, parent, variables=variables)
         self.condition = condition
 
-    def __enter__(self):
-        CodeBlock.__enter__(self)
-        self.code.append('while (%s) {' % self.condition)
-        return self
+    def __str__(self):
+        string = 'while (%s) {' % self.condition
+        string += CodeBlock.__str__(self)
+        return string
 
 class ForStatement(FunctionContextCodeBlock):
     def __init__(self, parent, initial, condition, update, variables=None):
@@ -172,10 +172,10 @@ class ForStatement(FunctionContextCodeBlock):
         self.condition = condition
         self.update = update
 
-    def __enter__(self):
-        CodeBlock.__enter__(self)
-        self.code.append('for (%s; %s; %s) {' % (self.initial, self.condition, self.update))
-        return self
+    def __str__(self):
+        string = 'for (%s; %s; %s) {' % (self.initial, self.condition, self.update)
+        string += CodeBlock.__str__(self)
+        return string
 
 class SourceFile(CodeBlock):
     def __init__(self):
