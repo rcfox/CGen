@@ -1,8 +1,10 @@
+from collections import deque
+
 class Variable(object):
     def __init__(self, name, type, value=None, const=False, static=False, volatile=False, restrict=False, register=False, extern=False):
         self.name = name
         self._type = type
-        self.value = value
+        self.value = deque([value])
         self.const = const
         self.static = static
         self.volatile = volatile
@@ -32,8 +34,8 @@ class Variable(object):
 
     def __str__(self):
         statement = self.definition()
-        if self.value is not None:
-            statement = '%s = %s' % (statement, self.value)
+        if len(self.value) > 0 and self.value[0] is not None:
+            statement = '%s = %s' % (statement, self.value.popleft())
         return statement
 
     def __repr__(self):
@@ -118,7 +120,7 @@ class FunctionContextCodeBlock(CodeBlock):
     def set(self, name, value, override_check=False):
         statement = '%s = %s' % (name, value)
         if name in self.variables or override_check:
-            self.variables[name].value = value
+            self.variables[name].value.append(value)
         else:
             raise KeyError(name, 'variable not defined')
         self.append(statement)
