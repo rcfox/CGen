@@ -25,6 +25,9 @@ class Variable(object):
             d = '%s %s' % ('register', d)
         return d
 
+    def pointer_type(self):
+        return '%s*' % self.type()
+
     def definition(self):
         if '(*)' in self.type():
             d = self.type().replace('(*)', '(*%s)' % self.name, 1)
@@ -99,11 +102,11 @@ class CodeBlock(object):
         self.append(var)
         return var
 
-    def struct(self, name, typedef=None):
-        return StructUnion(self, name, typedef, which='struct')
+    def struct(self, name):
+        return StructUnion(self, name, which='struct')
 
-    def union(self, name, typedef=None):
-        return StructUnion(self, name, typedef, which='union')
+    def union(self, name):
+        return StructUnion(self, name, which='union')
 
 class FunctionContextCodeBlock(CodeBlock):
     def if_statement(self, condition):
@@ -142,21 +145,33 @@ class FunctionContextCodeBlock(CodeBlock):
             self.append('return %s' % str(value))
 
 class StructUnion(CodeBlock):
-    def __init__(self, parent, name, typedef=None, which='struct'):
+    def __init__(self, parent, name, which='struct'):
         CodeBlock.__init__(self, parent)
         self.name = name
-        self.typedef = typedef
         self.which = which
+        self.functions = {}
 
     def __str__(self):
-        if self.typedef is None:
-            string = '%s %s {' % (self.which, self.name)
-        else:
-            string = 'typedef %s %s {' % (self.which, self.name)
-        string += CodeBlock.__str__(self)
-        if self.typedef is not None:
-            string += ' %s;' % self.typedef
+        sep = '\n' + self.indent_string * self.indent
+        indent_brace = self.indent_string * (self.indent - 1)
+        string = 'typedef %s %s {' % (self.which, self.name)
+        string += sep + sep.join(['%s;' % v.definition() for v in self.variables.values()])
+        string += '\n%s} %s;\n' % (indent_brace, self.name)
+        string += '\n' + '\n\n'.join([str(f) for f in self.functions.values()]) + '\n'
         return string
+
+    def function(self, name, return_type, arguments, include_self=True):
+        func_name = '%s_%s' % (self.name, name)
+        if include_self:
+            arguments.insert(0, Variable('self', 'struct %s*' % self.name))
+        func = Function(self, func_name, return_type, arguments, variables=self.variables)
+        func.indent -= 1
+        if name not in self.functions:
+            self.functions[name] = func
+            return func
+        else:
+            raise KeyError(name, 'function already exists')
+
 
 class Function(FunctionContextCodeBlock):
     def __init__(self, parent, name, return_type, arguments, variables=None):

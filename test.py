@@ -6,9 +6,15 @@ src = SourceFile()
 src.include('stdio.h', True)
 src.include('stdlib.h', True)
 
-with src.struct('foo', 'bar') as struct:
+with src.struct('foo') as struct:
     struct.variable('baz', 'int')
     struct.variable('qux', 'char*', const=True)
+    with struct.function('new', 'struct %s*' % struct.name, [], include_self=False) as f:
+        f.return_statement('NULL')
+    with struct.function('test', struct.variables['baz'].type(), []) as f:
+        f.return_statement('self->baz')
+    with struct.function('test2', 'void', []) as f:
+        f.call('printf', [r'"Foo!\n"'])
 
 src.variable('foo', 'int', value=6, const=True)
 
