@@ -43,6 +43,19 @@ class Struct(Type):
         d.append('};')
         return '\n'.join(d)
 
+    # TODO: Look over this older code
+    # def function(self, name, return_type, arguments, include_self=True):
+    #     func_name = '%s_%s' % (self.name, name)
+    #     if include_self:
+    #         arguments.insert(0, Variable('self', 'struct %s*' % self.name))
+    #     func = Function(self, func_name, return_type, arguments, variables=self.variables)
+    #     func.indent -= 1
+    #     if name not in self.functions:
+    #         self.functions[name] = func
+    #         return func
+    #     else:
+    #         raise KeyError(name, 'function already exists')
+
 class Variable(object):
     def __init__(self, name, type, value=None):
         self.name = name
@@ -52,7 +65,7 @@ class Variable(object):
     def definition(self):
         return '%s %s' % (self.type.declaration(), self.name)
 
-    def code(self):
+    def output(self):
         statement = self.definition()
         if len(self._value) > 0 and self._value[0] is not None:
             statement = '%s = %s' % (statement, self._value.pop())

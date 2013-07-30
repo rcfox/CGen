@@ -10,7 +10,7 @@ def test_static_variable():
 
 def test_variable_with_value():
     v = Variable('foo', Type('int'), value=42)
-    assert v.code() == 'int foo = 42'
+    assert v.output() == 'int foo = 42'
 
 def test_variable_set_val():
     v = Variable('foo', Type('int'))
@@ -20,7 +20,7 @@ def test_variable_set_val():
     assert v.value() == 13
     assert v.value() == 4
     assert v.value() == 42
-    assert v.code() == 'int foo'
+    assert v.output() == 'int foo'
 
 def test_variable_with_value_set_val():
     v = Variable('foo', Type('int'), value=500)
@@ -30,12 +30,12 @@ def test_variable_with_value_set_val():
     assert v.value() == 13
     assert v.value() == 4
     assert v.value() == 42
-    assert v.code() == 'int foo = 500'
+    assert v.output() == 'int foo = 500'
 
 def test_pointer_variable():
     v = Variable('foo', Type('int').pointer())
-    assert v.code() == 'int* foo'
+    assert v.output() == 'int* foo'
 
 def test_struct_variable():
     v = Variable('foo', Struct('bar', []))
-    assert v.code() == 'struct bar foo'
+    assert v.output() == 'struct bar foo'
