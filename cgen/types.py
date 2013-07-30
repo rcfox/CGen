@@ -31,9 +31,8 @@ class Type(object):
         return d
 
 class Struct(Type):
-    def __init__(self, name, variables, const=False, static=False, volatile=False, restrict=False, register=False, pointer_level=0):
-        super(self.__class__, self).__init__(name, const=const, static=static, volatile=volatile,
-                                             restrict=restrict, register=register, pointer_level=pointer_level)
+    def __init__(self, name, variables, **kwargs):
+        super(self.__class__, self).__init__(name, kwargs)
         self.variables = variables
         self.name = 'struct %s' % self.name
 
@@ -43,3 +42,24 @@ class Struct(Type):
             d.append('    %s;' % v.definition())
         d.append('};')
         return '\n'.join(d)
+
+class Variable(object):
+    def __init__(self, name, type, value=None):
+        self.name = name
+        self.type = type
+        self._value = [value]
+
+    def definition(self):
+        return '%s %s' % (self.type.declaration(), self.name)
+
+    def code(self):
+        statement = self.definition()
+        if len(self._value) > 0 and self._value[0] is not None:
+            statement = '%s = %s' % (statement, self._value.pop())
+        return statement
+
+    def set(self, value):
+        self._value.append(value)
+
+    def value(self):
+        return self._value.pop()
