@@ -81,7 +81,6 @@ class FunctionContextCodeBlock(CodeBlock):
         return For(self, initial, condition, update, variables=variables)
 
     def set(self, name, value, override_check=False):
-        statement = '%s = %s' % (name, value)
         if name in self.variables or override_check:
             self.append(statements.Set(self, self.variables[name], value))
         else:
