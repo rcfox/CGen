@@ -23,3 +23,4 @@ Output:
         return 0;
     }
 
+Run the tests with `nosetests`.
