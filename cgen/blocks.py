@@ -86,12 +86,8 @@ class FunctionContextCodeBlock(CodeBlock):
         else:
             raise KeyError(name, 'variable not defined')
 
-    def call(self, function_name, arguments, use_return=False):
-        statement = '%s(%s)' % (function_name, ', '.join(arguments))
-        if not use_return:
-            self.append(statement)
-        else:
-            return statement
+    def call(self, function_name, arguments):
+        self.append(statements.Call(self, function_name, arguments))
 
     def return_statement(self, value=None):
         self.append(statements.Return(self, value))

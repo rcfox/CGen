@@ -29,3 +29,17 @@ int main(int argc, char** argv) {
     }
     return 1;
 }'''
+
+def test_function_call_function():
+    src = SourceFile()
+    with src.function('main', Type('int'), [Variable('argc', Type('int')), Variable('argv', Type('char').pointer().pointer())]) as f:
+        f.variable('foo', Type('int'), value=42)
+        f.call('printf', [r'"foo %d\n"', 'foo'])
+        f.return_statement(0)
+    assert src.output() == \
+r'''
+int main(int argc, char** argv) {
+    int foo = 42;
+    printf("foo %d\n", foo);
+    return 0;
+}'''

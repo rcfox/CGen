@@ -17,3 +17,12 @@ class Return(object):
             return 'return'
         else:
             return 'return %s' % self.value
+
+class Call(object):
+    def __init__(self, parent, function_name, arguments):
+        self.parent = parent
+        self.function_name = function_name
+        self.arguments = arguments
+
+    def output(self):
+        return '%s(%s)' % (self.function_name, ', '.join(self.arguments))
