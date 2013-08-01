@@ -1,4 +1,5 @@
 from types import *
+import statements
 
 class CodeBlock(object):
     def __init__(self, parent, text=None, variables=None):
@@ -38,7 +39,7 @@ class CodeBlock(object):
                     else:
                         code_strings.append('%s;' % c.output())
                 else:
-                    code_strings.append(str(c))
+                    code_strings.append(c.output())
             string = sep.join(code_strings)
         if self.indent > 0:
             indent_close = self.indent_string * (self.indent-1)
@@ -66,10 +67,10 @@ class CodeBlock(object):
 
 class FunctionContextCodeBlock(CodeBlock):
     def if_statement(self, condition):
-        return IfStatement(self, condition, variables=self.variables)
+        return If(self, condition, variables=self.variables)
 
     def while_statement(self, condition):
-        return WhileStatement(self, condition, variables=self.variables)
+        return While(self, condition, variables=self.variables)
 
     def for_statement(self, initial, condition, update):
         variables = self.variables
@@ -77,15 +78,14 @@ class FunctionContextCodeBlock(CodeBlock):
             if initial.value is None:
                 raise ValueError('%s: must initialize variable in for loop' % initial.name)
             variables[initial.name] = initial
-        return ForStatement(self, initial, condition, update, variables=variables)
+        return For(self, initial, condition, update, variables=variables)
 
     def set(self, name, value, override_check=False):
         statement = '%s = %s' % (name, value)
         if name in self.variables or override_check:
-            self.variables[name].value.append(value)
+            self.append(statements.Set(self, self.variables[name], value))
         else:
             raise KeyError(name, 'variable not defined')
-        self.append(statement)
 
     def call(self, function_name, arguments, use_return=False):
         statement = '%s(%s)' % (function_name, ', '.join(arguments))
@@ -95,10 +95,7 @@ class FunctionContextCodeBlock(CodeBlock):
             return statement
 
     def return_statement(self, value=None):
-        if value is None:
-            self.append('return')
-        else:
-            self.append('return %s' % str(value))
+        self.append(statements.Return(self, value))
 
 class Function(FunctionContextCodeBlock):
     def __init__(self, parent, name, return_type, arguments, variables=None):
@@ -124,7 +121,7 @@ class Function(FunctionContextCodeBlock):
         string += super(self.__class__, self).output()
         return string
 
-class IfStatement(FunctionContextCodeBlock):
+class If(FunctionContextCodeBlock):
     def __init__(self, parent, condition, variables=None):
         super(self.__class__, self).__init__(parent, variables=variables)
         self.condition = condition
@@ -134,7 +131,7 @@ class IfStatement(FunctionContextCodeBlock):
         string += super(self.__class__, self).output()
         return string
 
-class WhileStatement(FunctionContextCodeBlock):
+class While(FunctionContextCodeBlock):
     def __init__(self, parent, condition, variables=None):
         super(self.__class__, self).__init__(parent, variables=variables)
         self.condition = condition
@@ -144,7 +141,7 @@ class WhileStatement(FunctionContextCodeBlock):
         string += super(self.__class__, self).output()
         return string
 
-class ForStatement(FunctionContextCodeBlock):
+class For(FunctionContextCodeBlock):
     def __init__(self, parent, initial, condition, update, variables=None):
         super(self.__class__, self).__init__(parent, variables=variables)
         self.initial = initial
