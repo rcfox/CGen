@@ -1,4 +1,5 @@
 import copy
+from collections import deque
 
 class Type(object):
     def __init__(self, name, const=False, static=False, volatile=False, restrict=False, register=False, pointer_level=0):
@@ -60,7 +61,7 @@ class Variable(object):
     def __init__(self, name, type, value=None):
         self.name = name
         self.type = type
-        self._value = [value]
+        self._value = deque([value])
 
     def definition(self):
         return '%s %s' % (self.type.declaration(), self.name)
@@ -68,7 +69,7 @@ class Variable(object):
     def output(self):
         statement = self.definition()
         if len(self._value) > 0 and self._value[0] is not None:
-            statement = '%s = %s' % (statement, self._value.pop())
+            statement = '%s = %s' % (statement, self._value.popleft())
         return statement
 
     def set(self, value):
