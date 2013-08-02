@@ -143,7 +143,10 @@ class For(FunctionContextCodeBlock):
         self.update = update
 
     def output(self):
-        string = 'for (%s; %s; %s) {' % (self.initial, self.condition, self.update)
+        if type(self.initial) == Variable:
+            string = 'for (%s; %s; %s) {' % (self.initial.output(), self.condition, self.update)
+        else:
+            string = 'for (%s; %s; %s) {' % (self.initial, self.condition, self.update)
         string += super(self.__class__, self).output()
         return string
 
