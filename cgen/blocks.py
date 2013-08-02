@@ -59,11 +59,10 @@ class CodeBlock(object):
         self.append(var)
         return var
 
-    def struct(self, name):
-        return StructUnion(self, name, which='struct')
-
-    def union(self, name):
-        return StructUnion(self, name, which='union')
+    def struct(self, name, variables=None):
+        if variables is None:
+            variables = []
+        return Struct(name, variables, parent=self)
 
 class FunctionContextCodeBlock(CodeBlock):
     def if_statement(self, condition):

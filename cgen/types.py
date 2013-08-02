@@ -32,17 +32,28 @@ class Type(object):
         return d
 
 class Struct(Type):
-    def __init__(self, name, variables, **kwargs):
+    def __init__(self, name, variables, parent=None, **kwargs):
         super(self.__class__, self).__init__(name, kwargs)
         self.variables = variables
         self.name = 'struct %s' % self.name
+        self.parent = parent
 
     def definition(self):
         d = ['%s {' % self.name]
         for v in self.variables:
             d.append('    %s;' % v.definition())
-        d.append('};')
+        d.append('}')
         return '\n'.join(d)
+
+    def output(self):
+        return self.definition()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.parent:
+            self.parent.code.append(self)
 
     # TODO: Look over this older code
     # def function(self, name, return_type, arguments, include_self=True):
